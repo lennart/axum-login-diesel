@@ -1,6 +1,15 @@
-essentially: https://stackoverflow.com/a/67660978 was the most insightful answer of all regarding generic diesel programming...thanks Neikos
+# axum-login integration for diesel
 
-code integrated and adapted from:
+integrate [diesel](https://github.com/diesel-rs/diesel) with
+[axum-login](https://github.com/maxcountryman/axum-login)
+
+## references and code snippets
+
+various parts from gitter and stack overflow, potentially integrated in this repo.
+
+generics with diesel, https://stackoverflow.com/a/67660978
+
+not quite, but almost:
 
 (https://matrix.to/#/!lNGJpfiFVovXFJYmwx:matrix.org/$167545602134687zjLNx:matrix.org?via=mozilla.org&via=gitter.im&via=matrix.org)
 
