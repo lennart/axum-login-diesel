@@ -39,11 +39,11 @@ pub type PostgresStore<User, Role = ()> = DieselStore<Pool<ConnectionManager<PgC
 #[async_trait]
 impl<UserId: Sync + Copy, User, Role> UserStore<UserId, Role> for PostgresStore<User, Role>
 where
+     Role: PartialOrd + PartialEq + Clone + Send + Sync + 'static,
+    User: HasTable + AuthUser<UserId, Role> + Selectable<Pg>,
+<User as HasTable>::Table: Table + FindDsl<UserId>,
 Find<<User as HasTable>::Table, UserId>: LimitDsl + RunQueryDsl<PgConnection>,
 for<'query> Limit<Find<<User as HasTable>::Table, UserId>>: LoadQuery<'query, PgConnection, User>,
-     Role: PartialOrd + PartialEq + Clone + Send + Sync + 'static,
-<User as HasTable>::Table: Table + FindDsl<UserId>,
-    User: HasTable + AuthUser<UserId, Role> + Selectable<Pg>,
 {
     type User = User;
 
