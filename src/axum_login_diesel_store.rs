@@ -1,4 +1,5 @@
 use axum_login::{UserStore, AuthUser};
+use diesel::RunQueryDsl;
 use diesel::query_dsl::methods::FindDsl;
 use diesel::r2d2::Pool;
 use diesel::r2d2::ConnectionManager;
@@ -38,7 +39,7 @@ pub type PostgresStore<User, Role = ()> = DieselStore<Pool<ConnectionManager<PgC
 #[async_trait]
 impl<UserId: Sync + Copy, User, Role> UserStore<UserId, Role> for PostgresStore<User, Role>
 where
-Find<<User as HasTable>::Table, UserId>: LimitDsl + Table,
+Find<<User as HasTable>::Table, UserId>: LimitDsl + RunQueryDsl<PgConnection>,
 for<'query> Limit<Find<<User as HasTable>::Table, UserId>>: LoadQuery<'query, PgConnection, User>,
      Role: PartialOrd + PartialEq + Clone + Send + Sync + 'static,
 <User as HasTable>::Table: Table + FindDsl<UserId>,

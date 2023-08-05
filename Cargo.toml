@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 axum = "0.6.20"
 axum-login = "0.5.0"
+axum-macros = "0.3.8"
 diesel = { version = "2.1.0", features = [ "postgres", "r2d2" ] }
 diesel_migrations = { version = "2.1.0", feature = [ "postgres" ] }
 dotenvy = "0.15.7"

@@ -4,7 +4,17 @@ use diesel::r2d2::Pool;
 use diesel::r2d2::ConnectionManager;
 use dotenvy::dotenv;
 use std::env;
-use rand::Rng;
+use axum_macros::debug_handler; 
+use axum::{
+    Extension,
+    response::{
+        IntoResponse,
+    },
+    routing::{
+        get,
+    },
+    extract::{State},
+};
 use axum::Router;
 use axum_login::{
     axum_sessions::{
@@ -13,7 +23,9 @@ use axum_login::{
     },
     AuthLayer, RequireAuthorizationLayer
 };
+use diesel::prelude::*;
 use axum_login_diesel::models::*;
+use axum_login_diesel::schema::users::dsl::users;
 
 pub type PostgresUserStore = axum_login_diesel_store::PostgresStore<User>;
 
@@ -43,42 +55,44 @@ async fn main() {
 
     let user_store = PostgresUserStore::new(pool.clone());
 
-    let conn = &mut pool.get().unwrap();
-    
-    let secret = rand::thread_rng().gen::<[u8; 32]>();
+    let _conn = &mut pool.get().unwrap();
+
+    let secret_string = env::var("SESSION_SECRET").expect("SESSION_SECRET must be set");
+    let secret = secret_string.as_bytes();
 
     let session_store = MemoryStore::new();
-    let session_layer = SessionLayer::new(session_store, &secret).with_secure(false);
+    let session_layer = SessionLayer::new(session_store, secret).with_secure(false);
 
-    let auth_layer = AuthLayer::new(user_store, &secret);
+    let auth_layer = AuthLayer::new(user_store, secret);
 
-    // async fn login_handler(state: AppState, mut auth: AuthContext) {
-    //     let conn = &mut state.pool.clone().get().unwrap();
-    //     let user: User = users
-    //         .find(1)
-    //         .first(conn)
-    //         .expect("Cannot load user");
-    //     auth.login(&user).await.unwrap();
-    // }
+    #[debug_handler]
+    async fn login_handler(State(state): State<AppState>, mut auth: AuthContext) {
+        let conn = &mut state.pool.clone().get().unwrap();
+        let user: User = users
+            .find(1)
+            .first(conn)
+            .expect("Cannot load user");
+        auth.login(&user).await.unwrap();
+    }
 
-    // async fn logout_handler(_state: AppState, mut auth: AuthContext) {
-    //     dbg!("Logging out user: {}", &auth.current_user);
-    //     auth.logout().await;
-    // }
+    async fn logout_handler(State(_state): State<AppState>, mut auth: AuthContext) {
+        dbg!("Logging out user: {}", &auth.current_user);
+        auth.logout().await;
+    }
 
-    // async fn protected_handler(_state: AppState, Extension(user): Extension<User>) -> impl IntoResponse {
-    //     format!("Logged in as: {}", user.name)
-    // }
+    async fn protected_handler(State(_state): State<AppState>, Extension(user): Extension<User>) -> impl IntoResponse {
+        format!("Logged in as: {}", user.name)
+    }
 
     let app = Router::new()
-        .with_state(AppState { pool: pool.clone() })
-        // .route("/protected", get(protected_handler))
+        .route("/protected", get(protected_handler))
         .route_layer(RequireAuthorizationLayer::<i32, User>::login())
-        // .route("/login", get(login_handler))
-        // .route("/logout", get(logout_handler))
-        // .layer(auth_layer)
-        .layer(session_layer);
-
+        .route("/login", get(login_handler))
+        .route("/logout", get(logout_handler))
+        .layer(auth_layer)
+        .layer(session_layer)
+        .with_state(AppState { pool: pool.clone() });
+    
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
         .serve(app.into_make_service())
         .await
